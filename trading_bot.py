@@ -50,7 +50,7 @@ def analyze_trade(message):
 
     try:
         response = ai_client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=f"قم بتحليل وتوفير صفقة تداول بناءً على الطلب التالي: {user_query}",
             config=types.GenerateContentConfig(
                 system_instruction=TRADING_SYSTEM_INSTRUCTION,
