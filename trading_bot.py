@@ -71,33 +71,28 @@ def handle_text(message):
     bot.reply_to(message, f"📌 تم استقبال الرمز والتايم فريم: `{message.text}`\nالآن أرسل لي **صورة الشارت (Screenshot)** لنقرا السعر الحقيقي ونبدأ التحليل!")
 
 @bot.message_handler(content_types=['photo'])
+@bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
-    text_info = user_states.get(user_id, "XAUUSD 15M") # القيمة الافتراضية إذا نسى يكتبها
+    text_info = user_states.get(user_id, "XAUUSD 15M")
     
     sent_msg = bot.reply_to(message, "⏳ جاري فحص الشارت وقراءة الأسعار الحقيقية الحالية، لحظات...")
     
     try:
-        # تحميل الصورة المرسلة من تيليجرام
         file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        # حفظ الصورة مؤقتاً لمعالجتها
         image_path = "temp_chart.jpg"
         with open(image_path, 'wb') as new_file:
             new_file.write(downloaded_file)
             
-        # رفع الصورة لـ Gemini Vision لتحليلها
         sample_file = genai.upload_file(path=image_path, display_name="Chart Screenshot")
-        
         prompt = f"قم بتحليل شارت التداول التالي للزوج والتايم فريم: {text_info}. اقرأ السعر الحالي بدقة من أقصى يمين الشارت واعطني التوصية الكاملة بدخول حقيقي."
         
         response = model.generate_content([sample_file, prompt])
         
-        # إرسال التحليل للمستخدم
         bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=response.text)
         
-        # حذف الملف المؤقت
         if os.path.exists(image_path):
             os.remove(image_path)
             
