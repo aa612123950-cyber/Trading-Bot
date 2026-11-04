@@ -92,4 +92,4 @@ def handle_photo(message):
         
         prompt = f"قم بتحليل شارت التداول التالي للزوج والتايم فريم: {text_info}. اقرأ السعر الحالي بدقة من أقصى يمين الشارت واعطني التوصية الكاملة بدخول حقيقي."
         
-        response = model.generate_content(
+        response = (model.generate_content)
