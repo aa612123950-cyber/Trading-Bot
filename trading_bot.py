@@ -43,7 +43,7 @@ system_instruction = """
 """
 
 model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
+    model_name="gemini-2.5-flash",
     generation_config=generation_config,
     system_instruction=system_instruction
 )
@@ -92,4 +92,20 @@ def handle_photo(message):
         
         prompt = f"قم بتحليل شارت التداول التالي للزوج والتايم فريم: {text_info}. اقرأ السعر الحالي بدقة من أقصى يمين الشارت واعطني التوصية الكاملة بدخول حقيقي."
         
-        response = (model.generate_content)
+        response = model.generate_content([sample_file, prompt])
+        
+        # إرسال التحليل للمستخدم
+        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=response.text)
+        
+        # حذف الملف المؤقت
+        if os.path.exists(image_path):
+            os.remove(image_path)
+            
+    except Exception as e:
+        logger.error(f"خطأ أثناء المعالجة: {e}")
+        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=f"❌ حدث خطأ أثناء التحليل: {str(e)}")
+
+# تشغيل البوت باستمرار
+if __name__ == '__main__':
+    logger.info("البوت بدأ يعمل بنجاح...")
+    bot.infinity_polling()
