@@ -20,7 +20,7 @@ if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# إعداد نموذج جيميناي مع التعليمات الصارمة لقراءة الأسعار الحقيقية من الشارت
+# إعداد نموذج جيميناي بطريقة مستقرة ومتوافقة
 generation_config = {
     "temperature": 0.2,
     "top_p": 0.95,
@@ -28,24 +28,9 @@ generation_config = {
     "max_output_tokens": 1024,
 }
 
-system_instruction = """
-أنت خبير تحليل فني محترف في الأسواق المالية (خصوصاً الذهب XAUUSD والعملات). مهمتك هي تحليل لقطة الشاشة (Screenshot) المرفقة للشارت بدقة تامة.
-قواعد صارمة جداً:
-1. اقرأ السعر الحالي الحقيقي للسوق الظاهر في أقصى يمين الشارت (سعر السوق الراهن بدقة).
-2. يجب أن تكون مناطق الدخول، وقف الخسارة، والأهداف مبنية حصراً وبشكل واقعي تماماً على السعر الحالي الظاهر في الصورة، وممنوع نهائياً استخدام أي أسعار افتراضية أو قديمة أو ثابتة.
-3. قدم التحليل بالترتيب التالي:
-   - الزوج / الأداة وفريم الوقت
-   - نوع الصفقة: شراء (BUY) أو بيع (SELL)
-   - سعر الدخول الحقيقي (Entry)
-   - وقف الخسارة (Stop Loss)
-   - الهدف الأول (TP1) والهدف الثاني (TP2)
-   - الأسباب الفنية باختصار (هيكل السوق، مناطق العرض والطلب، والزخم).
-"""
-
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    generation_config=generation_config,
-    system_instruction=system_instruction
+    model_name="gemini-3.8-flash",
+    generation_config=generation_config
 )
 
 # تخزين مؤقت لحالة المستخدمين (لانتظار الشارت)
@@ -71,7 +56,6 @@ def handle_text(message):
     bot.reply_to(message, f"📌 تم استقبال الرمز والتايم فريم: `{message.text}`\nالآن أرسل لي **صورة الشارت (Screenshot)** لنقرا السعر الحقيقي ونبدأ التحليل!")
 
 @bot.message_handler(content_types=['photo'])
-@bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
     text_info = user_states.get(user_id, "XAUUSD 15M")
@@ -87,7 +71,14 @@ def handle_photo(message):
             new_file.write(downloaded_file)
             
         sample_file = genai.upload_file(path=image_path, display_name="Chart Screenshot")
-        prompt = f"قم بتحليل شارت التداول التالي للزوج والتايم فريم: {text_info}. اقرأ السعر الحالي بدقة من أقصى يمين الشارت واعطني التوصية الكاملة بدخول حقيقي."
+        
+        prompt = (
+            "أنت خبير تحليل فني محترف في الأسواق المالية (خصوصاً الذهب XAUUSD والعملات). مهمتك هي تحليل لقطة الشاشة (Screenshot) المرفقة للشارت بدقة تامة.\n"
+            "قواعد صارمة جداً:\n"
+            "1. اقرأ السعر الحالي الحقيقي للسوق الظاهر في أقصى يمين الشارت (سعر السوق الراهن بدقة).\n"
+            "2. يجب أن تكون مناطق الدخول، وقف الخسارة، والأهداف مبنية حصراً وبشكل واقعي تماماً على السعر الحالي الظاهر في الصورة، وممنوع نهائياً استخدام أي أسعار افتراضية أو قديمة أو ثابتة.\n"
+            f"قم بتحليل شارت التداول للزوج والتايم فريم: {text_info}، واعطني التوصية الكاملة بالترتيب (الزوج والفريم، نوع الصفقة BUY/SELL، سعر الدخول، وقف الخسارة، والأهداف الأول والثاني مع الأسباب الفنية)."
+        )
         
         response = model.generate_content([sample_file, prompt])
         
