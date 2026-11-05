@@ -20,7 +20,7 @@ if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# إعداد نموذج جيميناي بطريقة مستقرة ومتوافقة
+# إعداد نموذج جيميناي بطريقة مستقرة ومتوافقة تماماً
 generation_config = {
     "temperature": 0.2,
     "top_p": 0.95,
@@ -29,7 +29,7 @@ generation_config = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
+    model_name="gemini-1.5-flash",
     generation_config=generation_config
 )
 
