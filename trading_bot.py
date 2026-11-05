@@ -21,16 +21,16 @@ if not TELEGRAM_BOT_TOKEN or not GEMINI_API_KEY:
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 genai.configure(api_key=GEMINI_API_KEY)
 
-# إعداد نموذج جيميناي
+# إعداد نموذج جيميناي مع تقليل التوكنز لتسريع الاستجابة
 generation_config = {
     "temperature": 0.2,
     "top_p": 0.95,
     "top_k": 40,
-    "max_output_tokens": 1024,
+    "max_output_tokens": 800,
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
+    model_name="gemini-1.5-flash",
     generation_config=generation_config
 )
 
@@ -56,35 +56,39 @@ def handle_photo(message):
     user_id = message.from_user.id
     text_info = user_states.get(user_id, "XAUUSD 15M")
     
-    sent_msg = bot.reply_to(message, "⏳ جاري فحص الشارت وقراءة الأسعار الحالية، لحظات...")
+    sent_msg = bot.reply_to(message, "⏳ جاري فحص الشارت وقراءة الأسعار الحالية بسرعة، لحظات...")
     
+    image_path = "temp_chart.jpg"
     try:
         file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        image_path = "temp_chart.jpg"
         with open(image_path, 'wb') as new_file:
             new_file.write(downloaded_file)
             
+        # ضغط وتقليل حجم الصورة لتجنب مشاكل Timeout (504)
         img = Image.open(image_path)
+        img.thumbnail((1024, 1024))
         
         prompt = (
             "أنت خبير تحليل فني محترف في الأسواق المالية.\n"
             "قواعد صارمة:\n"
-            "1. اقرأ السعر الحالي الحقيقي للسوق الظاهر في أقصى يمين الشارت.\n"
+            "1. اقرأ السعر الحالي الحقيقي للسوق الظاهر في أقصى يمين الشارت بدقة.\n"
             "2. ابنِ مناطق الدخول، وقف الخسارة، والأهداف حصراً على السعر الحالي.\n"
             f"قم بتحليل شارت التداول للزوج والتايم فريم: {text_info}، واعطني التوصية بالترتيب (BUY/SELL، سعر الدخول، وقف الخسارة، والأهداف مع الأسباب الفنية)."
         )
         
+        # استدعاء النموذج مع مهلة أمان
         response = model.generate_content([img, prompt])
         bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=response.text)
-        
-        if os.path.exists(image_path):
-            os.remove(image_path)
             
     except Exception as e:
         logger.error(f"خطأ أثناء المعالجة: {e}")
-        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=f"❌ حدث خطأ: {str(e)}")
+        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=f"❌ حدث خطأ في الاتصال (TimeOut): تأكد من وضوح الشارت وحاول مجدداً.")
+    
+    finally:
+        if os.path.exists(image_path):
+            os.remove(image_path)
 
 if __name__ == '__main__':
     bot.infinity_polling()
