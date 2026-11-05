@@ -34,22 +34,21 @@ model = genai.GenerativeModel(
     generation_config=generation_config
 )
 
-def get_live_price(symbol):
+def get_live_price(symbol_text):
     """
-    دالة لجلب السعر الحقيقي والحي للأزواج الشهيرة (مثل الذهب والعملات الرقمية)
+    دالة مرنة لجلب السعر الحي وتفادي أي خطأ في قراءة النص المدخل
     """
-    symbol_upper = symbol.upper().replace("/", "").strip()
+    text = symbol_text.upper()
     
-    # استخدام API عام ومجاني لجلب أسعار الذهب والعملات الرقمية والعملات الأجنبية
     try:
-        if "XAU" in symbol_upper or "GOLD" in symbol_upper:
-            url = "https://api.coinbase.com/v2/prices/PAXG-USD/spot" # PAXG مرتبط بسعر الذهب الحقيقي
+        if "XAU" in text or "GOLD" in text:
+            url = "https://api.coinbase.com/v2/prices/PAXG-USD/spot"
             response = requests.get(url, timeout=5)
             data = response.json()
             price = data['data']['amount']
             return f"السعر الحقيقي الحالي للذهب (XAUUSD): {price} USD"
             
-        elif "BTC" in symbol_upper:
+        elif "BTC" in text:
             url = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
             response = requests.get(url, timeout=5)
             data = response.json()
@@ -57,18 +56,17 @@ def get_live_price(symbol):
             return f"السعر الحقيقي الحالي لبيتكوين (BTCUSD): {price} USD"
             
         else:
-            # محاولة جلب السعر عبر مصدر بديل أو الاعتماد على التحليل المباشر للزوج المدخل
-            return f"الزوج المطلوبة: {symbol_upper} (يتم التحليل بناءً على بيانات السوق الحالية)"
+            return f"الزوج أو الأصول المطلوبة: {symbol_text} (مبني على التحليل الفني المباشر لسعار السوق الحالية)"
             
     except Exception as e:
         logger.error(f"خطأ في جلب السعر الحي: {e}")
-        return f"الزوج المطلوبة: {symbol_upper}"
+        return f"الزوج المطلوبة: {symbol_text}"
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     welcome_text = (
         "مرحباً بك في بوت التداول الذكي 📊\n\n"
-        "هذا الإصدار مربوط ببيانات الأسعار الحية.\n"
+        "البوت مربوط الآن بالأسعار الحية.\n"
         "أرسل لي **اسم الزوج والتايم فريم** (مثال: `XAUUSD 15M` أو `BTCUSD 1H`) وسأجلب لك السعر الحي وأعطيك التحليل الفوري والدقيق!"
     )
     bot.reply_to(message, welcome_text)
@@ -79,14 +77,14 @@ def handle_text(message):
     sent_msg = bot.reply_to(message, f"🌐 جاري جلب السعر الحي وإعداد التحليل لـ `{user_input}`، لحظات...")
     
     try:
-        # جلب السعر الحي أولاً
+        # جلب السعر الحي بطريقة آمنة
         live_price_info = get_live_price(user_input)
         
         prompt = (
             f"أنت خبير تحليل فني محترف في الأسواق المالية.\n"
             f"بيانات السوق الحية الحالية:\n{live_price_info}\n"
             f"الزوج والتايم فريم المطلوب: {user_input}\n\n"
-            "قم بعمل تحليل فني متاحتري واحترافي مبني حصراً على السعر الحي المذكور أعلاه.\n"
+            "قم بعمل تحليل فني متكامل واحترافي مبني حصراً على السعر الحي المذكور أعلاه.\n"
             "عليك تقديم التوصية بالتنسيق التالي:\n"
             "1. السعر الحي المعتمد\n"
             "2. اتجاه السوق (Bullish / Bearish)\n"
@@ -102,7 +100,7 @@ def handle_text(message):
             
     except Exception as e:
         logger.error(f"خطأ أثناء توليد التحليل: {e}")
-        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=f"❌ حدث خطأ، تأكد من كتابة اسم الزوج بشكل صحيح.")
+        bot.edit_message_text(chat_id=message.chat.id, message_id=sent_msg.message_id, text=f"❌ حدث خطأ في النظام، يرجى المحاولة مجدداً.")
 
 if __name__ == '__main__':
     bot.infinity_polling()
